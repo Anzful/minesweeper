@@ -1,4 +1,4 @@
-// minesweeper-frontend/src/components/Header.js
+// src/components/Header.js
 import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
@@ -8,14 +8,18 @@ const Header = () => {
   return (
     <header>
       <h1>Minesweeper</h1>
-      <div>
+      <div className="header-right">
         {user ? (
           <>
-            <span>Welcome, {user.username}</span>
-            <button onClick={logout}>Logout</button>
+            <span style={{ marginRight: '1rem', color: '#fff' }}>
+              Welcome, {user.username}
+            </span>
+            <button onClick={logout} style={{ cursor: 'pointer' }}>
+              Logout
+            </button>
           </>
         ) : (
-          <span>Please log in or register</span>
+          <span style={{ color: '#fff' }}>Please log in or register</span>
         )}
       </div>
     </header>

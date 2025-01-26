@@ -1,4 +1,4 @@
-// minesweeper-frontend/src/components/Register.js
+// src/components/Register.js
 import React, { useState } from 'react';
 import API from '../services/api';
 
@@ -17,26 +17,30 @@ const Register = () => {
   };
 
   return (
-    <div>
+    <div className="form-card">
       <h2>Register</h2>
       <form onSubmit={handleRegister}>
-        <div>
-          <label>Username: </label>
+        <div className="form-group">
+          <label>Username:</label>
           <input 
-            type='text' 
-            value={username} 
-            onChange={(e) => setUsername(e.target.value)}
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)} 
+            required
           />
         </div>
-        <div>
-          <label>Password: </label>
+        <div className="form-group">
+          <label>Password:</label>
           <input 
-            type='password' 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)} 
+            required
           />
         </div>
-        <button type='submit'>Register</button>
+        <button className="btn-submit" type="submit">
+          Register
+        </button>
       </form>
     </div>
   );

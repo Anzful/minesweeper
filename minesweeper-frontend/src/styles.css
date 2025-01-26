@@ -1,0 +1,263 @@
+/* src/styles.css */
+
+/* Import a modern font (optional) */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+/* Global Styles & Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #1f4037, #99f2c8);
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Basic Container to center content on screen */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+header {
+  background-color: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  padding: 1rem;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 2rem;
+  color: #ffffff;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+header .header-right {
+  margin-top: 0.5rem;
+}
+
+header button {
+  background-color: #4ECDC4;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s;
+}
+
+header button:hover {
+  background-color: #38B2A1;
+  color: #fff;
+}
+
+/* Navigation */
+nav {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  background-color: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+  padding: 0.5rem;
+}
+
+nav a {
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+nav a:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Main content area */
+main {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Footer */
+footer {
+  background-color: rgba(0, 0, 0, 0.2);
+  text-align: center;
+  padding: 0.5rem;
+  color: #ffffff;
+}
+
+/* ========== FORMS (Login, Register) ========== */
+.form-card {
+  background-color: rgba(255, 255, 255, 0.95);
+  width: 320px;
+  max-width: 90%;
+  margin: 1rem auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  padding: 1.5rem;
+}
+
+.form-card h2 {
+  margin-bottom: 1rem;
+  text-align: center;
+  color: #2c3e50;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.55rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.btn-submit {
+  width: 100%;
+  background-color: #4ECDC4;
+  color: #ffffff;
+  border: none;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s;
+}
+
+.btn-submit:hover {
+  background-color: #38B2A1;
+}
+
+/* ========== GAME BOARD ========== */
+.game-container {
+  background-color: rgba(255, 255, 255, 0.92);
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  max-width: 900px;
+  width: 100%;
+}
+
+.game-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.game-topbar select {
+  padding: 0.4rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  outline: none;
+}
+
+.game-topbar button {
+  background-color: #FF6B6B;
+  border: none;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #fff;
+  transition: background-color 0.3s;
+}
+
+.game-topbar button:hover {
+  background-color: #FF3B3B;
+}
+
+.status-bar {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.board-row {
+  display: flex;
+  justify-content: center; /* to center the row */
+}
+
+/* Single cell styling */
+.board-cell {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s;
+  user-select: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.board-cell:hover {
+  transform: scale(1.05);
+}
+
+.board-cell.hidden {
+  background-color: #555;
+}
+
+.board-cell.flagged {
+  background-color: #777;
+}
+
+.board-cell.revealed {
+  background-color: #f0f0f0;
+}
+
+.board-cell.mine {
+  background-color: #e74c3c; /* red for mine */
+  color: #fff;
+  font-weight: 700;
+}
+
+.win-message, .lose-message {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  padding: 0.6rem;
+  border-radius: 5px;
+}
+
+.win-message {
+  background-color: #27ae60;
+}
+
+.lose-message {
+  background-color: #e74c3c;
+}
