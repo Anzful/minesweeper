@@ -9,7 +9,7 @@ exports.register = async (req, res) => {
     const { username, password } = req.body;
 
     // Check if user exists
-    const existingUser = await User.findOne({ where: { username } });
+    const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: 'Username already taken.' });
     }
@@ -23,7 +23,7 @@ exports.register = async (req, res) => {
       password: hashedPassword,
     });
 
-    return res.status(201).json({ message: 'User created successfully', userId: newUser.id });
+    return res.status(201).json({ message: 'User created successfully', userId: newUser._id });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
@@ -35,7 +35,7 @@ exports.login = async (req, res) => {
     const { username, password } = req.body;
 
     // Check user
-    const user = await User.findOne({ where: { username } });
+    const user = await User.findOne({ username });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials.' });
     }
@@ -47,11 +47,11 @@ exports.login = async (req, res) => {
     }
 
     // Generate JWT
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: '1d',
     });
 
-    return res.status(200).json({ token, user: { id: user.id, username: user.username } });
+    return res.status(200).json({ token, user: { id: user._id, username: user.username } });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });

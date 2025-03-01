@@ -89,6 +89,7 @@ const GameBoard = () => {
   const [timerActive, setTimerActive] = useState(false);
   const [gameId, setGameId] = useState(null);
   const [flagsRemaining, setFlagsRemaining] = useState(0);
+  const [gameStarted, setGameStarted] = useState(false);
 
   // Choose rows, cols, mines based on difficulty
   const getBoardParams = useCallback((diff) => {
@@ -117,6 +118,7 @@ const GameBoard = () => {
     setWon(false);
     setTime(0);
     setTimerActive(true);
+    setGameStarted(true);
 
     const { rows, cols, mines } = getBoardParams(diff);
     const newBoard = generateBoard(rows, cols, mines);
@@ -126,21 +128,16 @@ const GameBoard = () => {
     createNewGame(diff);
   }, [getBoardParams, createNewGame]);
 
-  // Whenever difficulty changes, start a new game
-  useEffect(() => {
-    startNewGame(difficulty);
-  }, [difficulty, startNewGame]);
-
-  // Timer effect
+  // Timer effect - Only run if game has started
   useEffect(() => {
     let interval = null;
-    if (timerActive && !gameOver) {
+    if (timerActive && !gameOver && gameStarted) {
       interval = setInterval(() => {
         setTime((prev) => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [timerActive, gameOver]);
+  }, [timerActive, gameOver, gameStarted]);
 
   const handleRevealCell = (r, c) => {
     if (gameOver) return;
@@ -257,8 +254,16 @@ const GameBoard = () => {
         <div>Flags: {flagsRemaining}</div>
       </div>
 
-      {/* Board */}
-      {board.map((row, r) => (
+      {/* Show instructions if game hasn't started */}
+      {!gameStarted && (
+        <div className="instructions">
+          <h3>Welcome to Minesweeper!</h3>
+          <p>Click "New Game" to start playing.</p>
+        </div>
+      )}
+
+      {/* Board - Only show if game has started */}
+      {gameStarted && board.map((row, r) => (
         <div className="board-row" key={r}>
           {row.map((cell, c) => {
             let cellClass = 'board-cell ';
@@ -297,8 +302,8 @@ const GameBoard = () => {
         </div>
       ))}
 
-      {/* Win / Lose Messages */}
-      {gameOver && (
+      {/* Win / Lose Messages - Only show if game has started */}
+      {gameStarted && gameOver && (
         won ? (
           <div className="win-message">You Win!</div>
         ) : (

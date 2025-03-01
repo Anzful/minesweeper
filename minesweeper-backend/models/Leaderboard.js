@@ -1,26 +1,25 @@
 // minesweeper-backend/models/Leaderboard.js
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
-const User = require('./User');
+const mongoose = require('mongoose');
 
-const Leaderboard = sequelize.define('Leaderboard', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
+const leaderboardSchema = new mongoose.Schema({
   difficulty: {
-    type: DataTypes.ENUM('easy', 'medium', 'hard'),
-    allowNull: false,
+    type: String,
+    enum: ['easy', 'medium', 'hard'],
+    required: true,
   },
   bestTime: {
-    type: DataTypes.INTEGER, // store best (lowest) time
-    allowNull: false,
+    type: Number, // store best (lowest) time
+    required: true,
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  }
+}, {
+  timestamps: true
 });
 
-// Association
-Leaderboard.belongsTo(User, { foreignKey: 'userId' });
-User.hasMany(Leaderboard, { foreignKey: 'userId' });
+const Leaderboard = mongoose.model('Leaderboard', leaderboardSchema);
 
 module.exports = Leaderboard;

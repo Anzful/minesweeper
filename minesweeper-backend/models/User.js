@@ -1,22 +1,20 @@
 // minesweeper-backend/models/User.js
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+const mongoose = require('mongoose');
 
-const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
+const userSchema = new mongoose.Schema({
   username: {
-    type: DataTypes.STRING,
+    type: String,
+    required: true,
     unique: true,
-    allowNull: false,
   },
   password: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
+    type: String,
+    required: true,
+  }
+}, {
+  timestamps: true
 });
+
+const User = mongoose.model('User', userSchema);
 
 module.exports = User;

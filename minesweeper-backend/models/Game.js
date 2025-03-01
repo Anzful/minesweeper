@@ -1,30 +1,29 @@
 // minesweeper-backend/models/Game.js
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
-const User = require('./User');
+const mongoose = require('mongoose');
 
-const Game = sequelize.define('Game', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
+const gameSchema = new mongoose.Schema({
   difficulty: {
-    type: DataTypes.ENUM('easy', 'medium', 'hard'),
-    allowNull: false,
+    type: String,
+    enum: ['easy', 'medium', 'hard'],
+    required: true,
   },
   timeTaken: {
-    type: DataTypes.INTEGER, // in seconds
-    allowNull: true,
+    type: Number, // in seconds
   },
   status: {
-    type: DataTypes.ENUM('in_progress', 'won', 'lost'),
-    defaultValue: 'in_progress',
+    type: String,
+    enum: ['in_progress', 'won', 'lost'],
+    default: 'in_progress',
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  }
+}, {
+  timestamps: true
 });
 
-// Association
-Game.belongsTo(User, { foreignKey: 'userId' });
-User.hasMany(Game, { foreignKey: 'userId' });
+const Game = mongoose.model('Game', gameSchema);
 
 module.exports = Game;

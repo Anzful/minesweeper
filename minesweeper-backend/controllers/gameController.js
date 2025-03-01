@@ -5,7 +5,7 @@ const Leaderboard = require('../models/Leaderboard');
 exports.createGame = async (req, res) => {
   try {
     const { difficulty } = req.body;
-    const userId = req.user.id; // from JWT middleware
+    const userId = req.user.userId; // from JWT middleware
 
     // Create a new game entry
     const newGame = await Game.create({
@@ -14,7 +14,14 @@ exports.createGame = async (req, res) => {
       status: 'in_progress',
     });
 
-    res.status(201).json({ message: 'Game created', game: newGame });
+    res.status(201).json({ 
+      message: 'Game created', 
+      game: {
+        id: newGame._id, // Return _id as id for frontend compatibility
+        difficulty: newGame.difficulty,
+        status: newGame.status
+      } 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -26,7 +33,7 @@ exports.updateGameStatus = async (req, res) => {
     const { gameId } = req.params;
     const { status, timeTaken } = req.body;
 
-    const game = await Game.findByPk(gameId);
+    const game = await Game.findById(gameId);
     if (!game) {
       return res.status(404).json({ message: 'Game not found' });
     }
@@ -39,8 +46,10 @@ exports.updateGameStatus = async (req, res) => {
     // If the user won, update the leaderboard
     if (status === 'won' && timeTaken) {
       const existingRecord = await Leaderboard.findOne({
-        where: { userId: game.userId, difficulty: game.difficulty },
+        userId: game.userId,
+        difficulty: game.difficulty
       });
+      
       if (existingRecord) {
         // If current time is better (lower) than the bestTime
         if (timeTaken < existingRecord.bestTime) {
@@ -57,7 +66,15 @@ exports.updateGameStatus = async (req, res) => {
       }
     }
 
-    return res.status(200).json({ message: 'Game updated', game });
+    return res.status(200).json({ 
+      message: 'Game updated', 
+      game: {
+        id: game._id,
+        difficulty: game.difficulty,
+        status: game.status,
+        timeTaken: game.timeTaken
+      } 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
