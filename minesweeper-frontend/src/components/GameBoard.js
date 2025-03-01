@@ -1,5 +1,5 @@
 // src/components/GameBoard.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import API from '../services/api';
 
 /** Helper function: Return an array of valid neighbor coordinates */
@@ -93,14 +93,33 @@ const GameBoard = () => {
   const [totalGames, setTotalGames] = useState(0);
   const [gamesWon, setGamesWon] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [compactView, setCompactView] = useState(false);
+  // For touch handling
+  const [isMobile, setIsMobile] = useState(false);
+  const longPressTimer = useRef(null);
+  const longPressDuration = 500; // ms
+
+  // Detect mobile device on mount
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia('(max-width: 768px)').matches || 
+                  'ontouchstart' in window || 
+                  navigator.maxTouchPoints > 0);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Choose rows, cols, mines based on difficulty
   const getBoardParams = useCallback((diff) => {
     switch (diff) {
       case 'medium':
-        return { rows: 16, cols: 16, mines: 40 };
+        return { rows: 8, cols: 16, mines: 20 };
       case 'hard':
-        return { rows: 16, cols: 30, mines: 99 };
+        return { rows: 16, cols: 16, mines: 40 };
       case 'easy':
       default:
         return { rows: 8, cols: 8, mines: 10 };
@@ -281,6 +300,71 @@ const GameBoard = () => {
     }
   };
 
+  // Touch event handlers for mobile
+  const handleTouchStart = (r, c) => {
+    if (gameOver || showConfirmation) return;
+    
+    // Start long press timer
+    longPressTimer.current = setTimeout(() => {
+      handleFlagCell(r, c, new Event('longpress'));
+      longPressTimer.current = null;
+    }, longPressDuration);
+  };
+
+  const handleTouchEnd = (r, c, e) => {
+    if (gameOver || showConfirmation) return;
+    
+    // Cancel long press timer if it exists
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+      
+      // If this was a short tap, reveal the cell
+      handleRevealCell(r, c);
+    }
+    
+    // Prevent default context menu
+    e.preventDefault();
+  };
+
+  const handleTouchMove = () => {
+    // Cancel long press if finger moved
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  // Update instructions text based on device
+  const getInstructions = () => {
+    if (isMobile) {
+      return (
+        <ul className="game-rules">
+          <li>Tap to reveal a cell</li>
+          <li>Long-press to place a flag</li>
+          <li>Find all mines to win!</li>
+        </ul>
+      );
+    } else {
+      return (
+        <ul className="game-rules">
+          <li>Left-click to reveal a cell</li>
+          <li>Right-click to place a flag</li>
+          <li>Find all mines to win!</li>
+        </ul>
+      );
+    }
+  };
+
+  // Get board class name based on difficulty and compact view
+  const getBoardClassName = () => {
+    let classNames = `game-board difficulty-${difficulty}`;
+    if (gameOver) classNames += ' game-over';
+    if (showConfirmation) classNames += ' dimmed';
+    if (compactView && difficulty === 'hard') classNames += ' compact-view';
+    return classNames;
+  };
+
   return (
     <div className="game-container">
       {/* Game Stats */}
@@ -301,16 +385,27 @@ const GameBoard = () => {
             disabled={gameStarted && !gameOver}
           >
             <option value="easy">Easy (8x8, 10 mines)</option>
-            <option value="medium">Medium (16x16, 40 mines)</option>
-            <option value="hard">Hard (16x30, 99 mines)</option>
+            <option value="medium">Medium (8x16, 20 mines)</option>
+            <option value="hard">Hard (16x16, 40 mines)</option>
           </select>
         </div>
-        <button 
-          className="new-game-btn"
-          onClick={handleNewGameClick}
-        >
-          New Game
-        </button>
+        <div className="game-controls">
+          {difficulty === 'hard' && gameStarted && (
+            <button 
+              className="view-toggle-btn"
+              onClick={() => setCompactView(!compactView)}
+              title={compactView ? "Switch to normal view" : "Switch to compact view"}
+            >
+              {compactView ? "Normal View" : "Compact View"}
+            </button>
+          )}
+          <button 
+            className="new-game-btn"
+            onClick={handleNewGameClick}
+          >
+            New Game
+          </button>
+        </div>
       </div>
 
       {/* Status Bar */}
@@ -341,60 +436,86 @@ const GameBoard = () => {
         <div className="instructions">
           <h3>Welcome to Minesweeper!</h3>
           <p>Select a difficulty and click "New Game" to start playing.</p>
-          <ul className="game-rules">
-            <li>Left-click to reveal a cell</li>
-            <li>Right-click to place a flag</li>
-            <li>Find all mines to win!</li>
-          </ul>
+          {getInstructions()}
+        </div>
+      )}
+
+      {/* Game controls information for mobile if game has started */}
+      {isMobile && gameStarted && !gameOver && !showConfirmation && (
+        <div className="mobile-controls-hint">
+          <p>Tap to reveal • Long-press to flag</p>
         </div>
       )}
 
       {/* Board - Only show if game has started */}
       {gameStarted && (
-        <div className={`game-board difficulty-${difficulty} ${gameOver ? 'game-over' : ''} ${showConfirmation ? 'dimmed' : ''}`}>
-          {board.map((row, r) => (
-            <div className="board-row" key={r}>
-              {row.map((cell, c) => {
-                let cellClass = 'board-cell ';
-                if (cell.revealed) {
-                  cellClass += 'revealed ';
-                  if (cell.isMine) {
-                    cellClass += 'mine ';
-                  }
-                } else {
-                  cellClass += 'hidden ';
-                  if (cell.flagged) {
-                    cellClass += 'flagged ';
-                  }
-                }
-
-                let content = '';
-                let style = {};
-                if (cell.flagged && !cell.revealed) {
-                  content = '🚩';
-                } else if (cell.revealed && cell.isMine) {
-                  content = '💣';
-                } else if (cell.revealed && cell.adjacentMines > 0) {
-                  content = cell.adjacentMines;
-                  style.color = getCellNumberColor(cell.adjacentMines);
-                  style.fontWeight = 'bold';
-                }
-
-                return (
-                  <div
-                    key={c}
-                    className={cellClass}
-                    onClick={() => handleRevealCell(r, c)}
-                    onContextMenu={(e) => handleFlagCell(r, c, e)}
-                    style={style}
-                  >
-                    {content}
-                  </div>
-                );
-              })}
+        <>
+          {difficulty === 'hard' && (
+            <div className="board-size-hint">
+              <p>
+                {compactView 
+                  ? "Compact view enabled. The board is automatically scaled to fit your screen." 
+                  : "Playing Hard difficulty (16x16). Use compact view to see more cells at once."}
+              </p>
             </div>
-          ))}
-        </div>
+          )}
+          <div className="game-board-wrapper">
+            <div className={getBoardClassName()}>
+              {board.map((row, r) => (
+                <div className="board-row" key={r}>
+                  {row.map((cell, c) => {
+                    let cellClass = 'board-cell ';
+                    if (cell.revealed) {
+                      cellClass += 'revealed ';
+                      if (cell.isMine) {
+                        cellClass += 'mine ';
+                      }
+                    } else {
+                      cellClass += 'hidden ';
+                      if (cell.flagged) {
+                        cellClass += 'flagged ';
+                      }
+                    }
+
+                    let content = '';
+                    let style = {};
+                    if (cell.flagged && !cell.revealed) {
+                      content = '🚩';
+                    } else if (cell.revealed && cell.isMine) {
+                      content = '💣';
+                    } else if (cell.revealed && cell.adjacentMines > 0) {
+                      content = cell.adjacentMines;
+                      style.color = getCellNumberColor(cell.adjacentMines);
+                      style.fontWeight = 'bold';
+                    }
+
+                    // Add different event handlers for mobile and desktop
+                    const cellProps = isMobile ? {
+                      onTouchStart: () => handleTouchStart(r, c),
+                      onTouchEnd: (e) => handleTouchEnd(r, c, e),
+                      onTouchMove: handleTouchMove,
+                      onContextMenu: (e) => e.preventDefault(), // Prevent context menu on mobile
+                    } : {
+                      onClick: () => handleRevealCell(r, c),
+                      onContextMenu: (e) => handleFlagCell(r, c, e),
+                    };
+
+                    return (
+                      <div
+                        key={c}
+                        className={cellClass}
+                        style={style}
+                        {...cellProps}
+                      >
+                        {content}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Win / Lose Messages - Only show if game has started */}
