@@ -90,6 +90,9 @@ const GameBoard = () => {
   const [gameId, setGameId] = useState(null);
   const [flagsRemaining, setFlagsRemaining] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
+  const [totalGames, setTotalGames] = useState(0);
+  const [gamesWon, setGamesWon] = useState(0);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Choose rows, cols, mines based on difficulty
   const getBoardParams = useCallback((diff) => {
@@ -107,6 +110,7 @@ const GameBoard = () => {
   const createNewGame = useCallback(async (diff) => {
     try {
       const response = await API.post('/games', { difficulty: diff });
+      console.log('New game created:', response.data);
       setGameId(response.data.game.id);
     } catch (error) {
       console.error('Error creating new game:', error);
@@ -119,14 +123,32 @@ const GameBoard = () => {
     setTime(0);
     setTimerActive(true);
     setGameStarted(true);
+    setShowConfirmation(false);
 
     const { rows, cols, mines } = getBoardParams(diff);
     const newBoard = generateBoard(rows, cols, mines);
     setBoard(newBoard);
     setFlagsRemaining(mines);
 
+    setTotalGames(prev => prev + 1);
     createNewGame(diff);
   }, [getBoardParams, createNewGame]);
+
+  // Check if a game is in progress before starting a new one
+  const handleNewGameClick = () => {
+    if (gameStarted && !gameOver) {
+      setShowConfirmation(true);
+    } else {
+      startNewGame(difficulty);
+    }
+  };
+
+  // Format time as mm:ss
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Timer effect - Only run if game has started
   useEffect(() => {
@@ -140,7 +162,7 @@ const GameBoard = () => {
   }, [timerActive, gameOver, gameStarted]);
 
   const handleRevealCell = (r, c) => {
-    if (gameOver) return;
+    if (gameOver || showConfirmation) return;
 
     const newBoard = board.map((row) =>
       row.map((cell) => ({ ...cell }))
@@ -153,7 +175,13 @@ const GameBoard = () => {
     cell.revealed = true;
 
     if (cell.isMine) {
-      // Game over
+      // Game over - reveal all mines
+      newBoard.forEach(row => {
+        row.forEach(c => {
+          if (c.isMine) c.revealed = true;
+        });
+      });
+      
       setBoard(newBoard);
       setGameOver(true);
       setTimerActive(false);
@@ -171,7 +199,7 @@ const GameBoard = () => {
 
   const handleFlagCell = (r, c, e) => {
     e.preventDefault();
-    if (gameOver) return;
+    if (gameOver || showConfirmation) return;
 
     const newBoard = board.map((row) =>
       row.map((cell) => ({ ...cell }))
@@ -204,12 +232,22 @@ const GameBoard = () => {
   }, []);
 
   const updateGameStatus = async (status, timeTaken) => {
-    if (!gameId) return;
+    if (!gameId) {
+      console.warn('No gameId available, cannot update game status');
+      return;
+    }
     try {
-      await API.put(`/games/${gameId}`, {
+      console.log(`Updating game ${gameId} status to ${status} with time ${timeTaken}`);
+      const response = await API.put(`/games/${gameId}`, {
         status,
         timeTaken,
       });
+      console.log('Game update response:', response.data);
+      
+      // Update stats when game is won
+      if (status === 'won') {
+        setGamesWon(prev => prev + 1);
+      }
     } catch (error) {
       console.error('Error updating game status:', error);
     }
@@ -217,7 +255,7 @@ const GameBoard = () => {
 
   // Check win condition after each render
   useEffect(() => {
-    if (!gameOver) {
+    if (!gameOver && gameStarted && board.length > 0) {
       const didWin = checkWinCondition(board);
       if (didWin) {
         setGameOver(true);
@@ -226,89 +264,157 @@ const GameBoard = () => {
         updateGameStatus('won', time);
       }
     }
-  }, [board, gameOver, checkWinCondition, time]);
+  }, [board, gameOver, checkWinCondition, time, gameStarted]);
+
+  // Get cell color based on adjacent mines
+  const getCellNumberColor = (number) => {
+    switch (number) {
+      case 1: return '#0000FF'; // blue
+      case 2: return '#008000'; // green
+      case 3: return '#FF0000'; // red
+      case 4: return '#000080'; // dark blue
+      case 5: return '#800000'; // maroon
+      case 6: return '#008080'; // teal
+      case 7: return '#000000'; // black
+      case 8: return '#808080'; // gray
+      default: return '#000000';
+    }
+  };
 
   return (
     <div className="game-container">
+      {/* Game Stats */}
+      <div className="game-stats">
+        <div className="stats-item">Games: {totalGames}</div>
+        <div className="stats-item">Wins: {gamesWon}</div>
+        <div className="stats-item">Win Rate: {totalGames > 0 ? Math.round((gamesWon / totalGames) * 100) : 0}%</div>
+      </div>
+      
       {/* Top Controls: Difficulty & New Game */}
       <div className="game-topbar">
-        <div>
-          <label style={{ marginRight: '0.5rem' }}>Difficulty:</label>
+        <div className="difficulty-selector">
+          <label htmlFor="difficulty-select">Difficulty:</label>
           <select 
+            id="difficulty-select"
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
+            disabled={gameStarted && !gameOver}
           >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
+            <option value="easy">Easy (8x8, 10 mines)</option>
+            <option value="medium">Medium (16x16, 40 mines)</option>
+            <option value="hard">Hard (16x30, 99 mines)</option>
           </select>
         </div>
-        <button onClick={() => startNewGame(difficulty)}>
+        <button 
+          className="new-game-btn"
+          onClick={handleNewGameClick}
+        >
           New Game
         </button>
       </div>
 
       {/* Status Bar */}
       <div className="status-bar">
-        <div>Time: {time}s</div>
-        <div>Flags: {flagsRemaining}</div>
+        <div className="status-item timer">
+          <span className="status-icon">⏱️</span>
+          <span className="status-value">{formatTime(time)}</span>
+        </div>
+        <div className="status-item flags">
+          <span className="status-icon">🚩</span>
+          <span className="status-value">{flagsRemaining}</span>
+        </div>
       </div>
 
+      {/* Confirmation Dialog */}
+      {showConfirmation && (
+        <div className="confirmation-dialog">
+          <p>Are you sure you want to start a new game? Your current game will be lost.</p>
+          <div className="dialog-buttons">
+            <button onClick={() => startNewGame(difficulty)}>Yes, Start New Game</button>
+            <button onClick={() => setShowConfirmation(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
       {/* Show instructions if game hasn't started */}
-      {!gameStarted && (
+      {!gameStarted && !showConfirmation && (
         <div className="instructions">
           <h3>Welcome to Minesweeper!</h3>
-          <p>Click "New Game" to start playing.</p>
+          <p>Select a difficulty and click "New Game" to start playing.</p>
+          <ul className="game-rules">
+            <li>Left-click to reveal a cell</li>
+            <li>Right-click to place a flag</li>
+            <li>Find all mines to win!</li>
+          </ul>
         </div>
       )}
 
       {/* Board - Only show if game has started */}
-      {gameStarted && board.map((row, r) => (
-        <div className="board-row" key={r}>
-          {row.map((cell, c) => {
-            let cellClass = 'board-cell ';
-            if (cell.revealed) {
-              cellClass += 'revealed ';
-              if (cell.isMine) {
-                cellClass += 'mine ';
-              }
-            } else {
-              cellClass += 'hidden ';
-              if (cell.flagged) {
-                cellClass += 'flagged ';
-              }
-            }
+      {gameStarted && (
+        <div className={`game-board difficulty-${difficulty} ${gameOver ? 'game-over' : ''} ${showConfirmation ? 'dimmed' : ''}`}>
+          {board.map((row, r) => (
+            <div className="board-row" key={r}>
+              {row.map((cell, c) => {
+                let cellClass = 'board-cell ';
+                if (cell.revealed) {
+                  cellClass += 'revealed ';
+                  if (cell.isMine) {
+                    cellClass += 'mine ';
+                  }
+                } else {
+                  cellClass += 'hidden ';
+                  if (cell.flagged) {
+                    cellClass += 'flagged ';
+                  }
+                }
 
-            let content = '';
-            if (cell.flagged && !cell.revealed) {
-              content = '🚩';
-            } else if (cell.revealed && cell.isMine) {
-              content = '💣';
-            } else if (cell.revealed && cell.adjacentMines > 0) {
-              content = cell.adjacentMines;
-            }
+                let content = '';
+                let style = {};
+                if (cell.flagged && !cell.revealed) {
+                  content = '🚩';
+                } else if (cell.revealed && cell.isMine) {
+                  content = '💣';
+                } else if (cell.revealed && cell.adjacentMines > 0) {
+                  content = cell.adjacentMines;
+                  style.color = getCellNumberColor(cell.adjacentMines);
+                  style.fontWeight = 'bold';
+                }
 
-            return (
-              <div
-                key={c}
-                className={cellClass}
-                onClick={() => handleRevealCell(r, c)}
-                onContextMenu={(e) => handleFlagCell(r, c, e)}
-              >
-                {content}
-              </div>
-            );
-          })}
+                return (
+                  <div
+                    key={c}
+                    className={cellClass}
+                    onClick={() => handleRevealCell(r, c)}
+                    onContextMenu={(e) => handleFlagCell(r, c, e)}
+                    style={style}
+                  >
+                    {content}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {/* Win / Lose Messages - Only show if game has started */}
-      {gameStarted && gameOver && (
-        won ? (
-          <div className="win-message">You Win!</div>
-        ) : (
-          <div className="lose-message">Game Over - You Lost!</div>
-        )
+      {gameStarted && gameOver && !showConfirmation && (
+        <div className={`game-result ${won ? 'win' : 'lose'}`}>
+          {won ? (
+            <>
+              <h3 className="result-title">🎉 You Win! 🎉</h3>
+              <p className="result-details">Time: {formatTime(time)}</p>
+            </>
+          ) : (
+            <>
+              <h3 className="result-title">💥 Game Over 💥</h3>
+              <p className="result-details">Better luck next time!</p>
+            </>
+          )}
+          <button className="play-again-btn" onClick={() => startNewGame(difficulty)}>
+            Play Again
+          </button>
+        </div>
       )}
     </div>
   );
